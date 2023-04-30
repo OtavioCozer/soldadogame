@@ -307,12 +307,20 @@ def main():
     # Initialize parser
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--Video", help = "Video file")
+    parser.add_argument("-c", "--Camera", help = "Which camera")
     args = parser.parse_args()
 
     width = 1280
     height = 720
     print(f"res: {width} x {height}")
-    cap = cv2.VideoCapture(args.Video) if args.Video else cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0)
+    if args.Video:
+        cap = cv2.VideoCapture(args.Video)
+    elif args.Camera:
+        print(args.Camera)
+        cap = cv2.VideoCapture(int(args.Camera))
+
+     
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
     ret, bg_image = cap.read()
