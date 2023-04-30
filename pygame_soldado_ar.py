@@ -313,13 +313,14 @@ def main():
     width = 1280
     height = 720
     print(f"res: {width} x {height}")
-    cap = cv2.VideoCapture(0)
+    cap = None
     if args.Video:
         cap = cv2.VideoCapture(args.Video)
     elif args.Camera:
         print(args.Camera)
         cap = cv2.VideoCapture(int(args.Camera))
-
+    else:
+        cap = cv2.VideoCapture(0)
      
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -386,10 +387,14 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+            elif event.type == pygame.KEYDOWN and (event.key == pygame.K_q or event.key == pygame.K_ESCAPE):
+                pygame.quit()
+                quit()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_l:
                 soldierRed.shoot()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
                 soldierGreen.shoot()
+
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(1, 0, 0, 1)
