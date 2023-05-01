@@ -36,11 +36,6 @@ class Soldier:
         self.r = color[0] / 255
         self.g = color[1] / 255
         self.b = color[2] / 255
-        self.bullet = None
-        self.bulletposinc = 0
-        self.bulletpos = 0
-        self.pos = None
-        self.life = 3
 
     def draw(self, velocidade: int, time: int):
         meshID = int((time) / velocidade) % len(self.vbo)
@@ -56,61 +51,6 @@ class Soldier:
         DrawBuffer(self.vbog, self.vbong, self.nvertsgun)
 
         self.pos = glGetFloatv(GL_MODELVIEW_MATRIX).T
-
-    def shoot(self):
-        self.bullet = gluNewQuadric()
-        self.bulletposinc = 0
-
-    def drawbullet(self):
-        if self.bullet is None:
-            return None
-
-        self.bulletposinc += 4
-        glTranslatef(-9.200068, 59.593624, 44.993179 + self.bulletposinc)
-
-        glDisable(GL_TEXTURE_2D)
-        glEnable(GL_LIGHTING)
-        glEnable(GL_LIGHT0)
-        glEnable(GL_COLOR_MATERIAL)
-        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-        glColor3f(self.r, self.g, self.b)
-        gluSphere(self.bullet, 3, 10, 10)
-
-        self.bulletpos = glGetFloatv(GL_MODELVIEW_MATRIX).T
-
-
-def checkCollision(soldierRed: Soldier, soldierGreen: Soldier):
-    if soldierRed.bullet is not None and soldierGreen.pos is not None:
-        redbulletpos = soldierRed.bulletpos[:, 3]
-        greenpos = soldierGreen.pos[:, 3]
-
-        redbulletpos = redbulletpos[:3] / redbulletpos[3]
-        greenpos = greenpos[:3] / greenpos[3]
-
-        if np.linalg.norm(greenpos - redbulletpos) < 70:
-            soldierGreen.life -= 1
-            soldierRed.bullet = None
-            print("Green was hit")
-            if soldierGreen.life <= 0:
-                print("Red win")
-                pygame.quit()
-                quit()
-
-    if soldierGreen.bullet is not None and soldierRed.pos is not None:
-        greenbulletpos = soldierGreen.bulletpos[:, 3]
-        redpos = soldierRed.pos[:, 3]
-
-        greenbulletpos = greenbulletpos[:3] / greenbulletpos[3]
-        redpos = redpos[:3] / redpos[3]
-
-        if np.linalg.norm(redpos - greenbulletpos) < 70:
-            soldierRed.life -= 1
-            soldierGreen.bullet = None
-            print("Red was hit")
-            if soldierRed.life <= 0:
-                print("Green win")
-                pygame.quit()
-                quit()
 
 
 def LoadMeshes(path, numberOfMeshes):
@@ -131,7 +71,6 @@ def DrawBuffer(vbo, vbon, noOfVertices):
     glNormalPointer(GL_FLOAT, 0, None)
 
     glDrawArrays(GL_TRIANGLES, 0, noOfVertices)
-    # glDrawArrays(GL_TRIANGLE_STRIP, 0, noOfVertices)
 
     glDisableClientState(GL_VERTEX_ARRAY)
     glDisableClientState(GL_NORMAL_ARRAY)
@@ -161,24 +100,19 @@ def intrinsic2Project(
     fx, fy = MTX[0, 0], MTX[1, 1]
     cx, cy = MTX[0, 2], MTX[1, 2]
 
-    P[0, 0] = 2 * fx / width
-    P[0, 2] = 1 - (2 * cx / width)
+    P[0, 0] = 0
+    P[0, 2] = 0
 
-    P[1, 1] = 2 * fy / height
-    P[1, 2] = (2 * cy / height) - 1
+    P[1, 1] = 0
+    P[1, 2] = 0
 
-    P[2, 2] = (far_plane + near_plane) / (near_plane - far_plane)
-    P[2, 3] = (2 * far_plane * near_plane) / (near_plane - far_plane)
+    P[2, 2] = 0
+    P[2, 3] = 0
 
-    P[3, 2] = -1
+    P[3, 2] = 0
 
     P = P.flatten(order="F")
-    fov = [
-        atan((width - cx) / fx),
-        atan((-cx) / fx),
-        atan((cy) / fy),
-        atan((cy - height) / fy),
-    ]
+    fov = [0, 0, 0, 0]
     return P, fov
 
 
@@ -219,29 +153,18 @@ def DrawObject(
 
     # operations on the frame come here
     gray = cv2.cvtColor(bg_image, cv2.COLOR_BGR2GRAY)  # Change grayscale
-    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
-    corners, ids, rejected_img_points = aruco.detectMarkers(gray, aruco_dict)
-    if ids is not None:
-        for id, corner in zip(ids.flatten(), corners):  # Iterate in markers
-            # Estimate pose of each marker and return the values rvec and tvec---different from camera coefficients
-            rvec, tvec, markerPoints = aruco.estimatePoseSingleMarkers(
-                corner, aruco_size, matrix_coefficients, distortion_coefficients
-            )
 
-            # monta a matriz que coloca o objeto no marcador
-            model_matrix = extrinsic2ModelView(rvec, tvec)
+    # SEU CODIGO AQUI
+    rvec, tvec = None, None
+    model_matrix = extrinsic2ModelView(rvec, tvec)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+    glPushMatrix()
+    glLoadMatrixf(model_matrix)
 
-            soldier = soldierRed if id == 0 else soldierGreen
+    soldierRed.draw(fator_velocidade, time)
 
-            glMatrixMode(GL_MODELVIEW)
-            glLoadIdentity()
-            glPushMatrix()
-            glLoadMatrixf(model_matrix)
-
-            soldier.draw(fator_velocidade, time)
-            soldier.drawbullet()
-
-            glPopMatrix()
+    glPopMatrix()
 
 
 def DrawBackground(texture_background, bg_image, fov, far):
@@ -252,13 +175,12 @@ def DrawBackground(texture_background, bg_image, fov, far):
     glColor3f(1.0, 1.0, 1.0)
     glMatrixMode(GL_MODELVIEW)
 
-    # calcula as coordenadas x e y que vao formar o retangulo de fundo
-    # Usa os angulos do Field of View para o calculo
-    pz = far - 1
-    pxr = tan(fov[0]) * pz
-    pxl = tan(fov[1]) * pz
-    pyt = tan(fov[2]) * pz
-    pyb = tan(fov[3]) * pz
+    # Defina as coordenadas onde a imagem de fundo deve ser colocada
+    pz = 0
+    pxr = 0
+    pxl = 0
+    pyt = 0
+    pyb = 0
 
     # draw background
     glBindTexture(GL_TEXTURE_2D, texture_background)
@@ -306,8 +228,8 @@ def main():
 
     # Initialize parser
     parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--Video", help = "Video file")
-    parser.add_argument("-c", "--Camera", help = "Which camera")
+    parser.add_argument("-v", "--Video", help="Video file")
+    parser.add_argument("-c", "--Camera", help="Which camera")
     args = parser.parse_args()
 
     width = 1280
@@ -321,7 +243,7 @@ def main():
         cap = cv2.VideoCapture(int(args.Camera))
     else:
         cap = cv2.VideoCapture(0)
-     
+
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
     ret, bg_image = cap.read()
@@ -387,24 +309,19 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            elif event.type == pygame.KEYDOWN and (event.key == pygame.K_q or event.key == pygame.K_ESCAPE):
+            elif event.type == pygame.KEYDOWN and (
+                event.key == pygame.K_q or event.key == pygame.K_ESCAPE
+            ):
                 pygame.quit()
                 quit()
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_l:
-                soldierRed.shoot()
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-                soldierGreen.shoot()
-
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(1, 0, 0, 1)
 
-        # get image from webcam
         ret, bg_image = cap.read()
         if args.Video:
             pygame.time.delay(40)
 
-        #  Desenha objetos
         DrawObject(
             bg_image,
             matrix_coefficients,
@@ -414,10 +331,10 @@ def main():
             90,
         )
         DrawBackground(texture_background, bg_image, fov, far)
-        checkCollision(soldierRed, soldierGreen)
 
         # Faz o update
         pygame.display.flip()
+
 
 if __name__ == "__main__":
     main()
