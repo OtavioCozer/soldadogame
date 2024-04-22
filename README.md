@@ -2,7 +2,7 @@
 
 This is a AR game written in python using PyGame, OpenGL and OpenCV.
 
-[![Game running]](https://www.youtube.com/watch?v=TGw1LIxRX5A&ab_channel=OtavioCozer)
+https://github.com/OtavioCozer/soldadogame/assets/38982699/033d94bf-fbd7-481f-9fb0-4e7e0bc78b46
 
 ## Usage
 
